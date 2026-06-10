@@ -112,6 +112,12 @@ export default function HomeScreen({ navigation }: any) {
     setNotesByDate({ ...notesByDate, [selectedKey]: updated });
   };
 
+  const toggleDone = (id: string) => {
+    const existing = notesByDate[selectedKey] || [];
+    const updated = existing.map((n: any) => n.id === id ? { ...n, done: !n.done } : n);
+    setNotesByDate({ ...notesByDate, [selectedKey]: updated });
+  };
+
   const openEdit = (note: any) => {
     setEditingId(note.id);
     setSelectedCat(note.category);
@@ -238,7 +244,9 @@ export default function HomeScreen({ navigation }: any) {
             selectedNotes.map(note => (
               <View key={note.id} style={[styles.noteCard, { borderLeftColor: CATEGORY_COLORS[note.category] || '#1A73E8' }]}>
                 <View style={styles.noteCardHeader}>
-                  <Text style={styles.catIcon}>{CATEGORY_ICONS[note.category] || '📝'}</Text>
+                  <TouchableOpacity onPress={() => toggleDone(note.id)}>
+                    <Text style={styles.catIcon}>{note.done ? '✅' : CATEGORY_ICONS[note.category] || '📝'}</Text>
+                  </TouchableOpacity>
                   <Text style={[styles.noteTitle, note.done && styles.doneText]}>{note.title}</Text>
                   <View style={styles.noteActions}>
                     <TouchableOpacity onPress={() => openEdit(note)}>
