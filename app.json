@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "NoteApp",
+    "slug": "NoteApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.hakankry.NoteApp",
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Ses kaydı için mikrofon izni gerekiyor."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a25f9acd-115b-474a-b169-938a0f84ab17"
+      }
+    }
+  }
+}
