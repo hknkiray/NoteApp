@@ -3,7 +3,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, TextInput, Modal, Platform,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
@@ -356,43 +355,34 @@ export default function NotesScreen({ navigation, route }: any) {
               <View style={styles.dateTimeRow}>
                 <View style={styles.dateTimeBox}>
                   <Text style={styles.label}>📅 Tarih</Text>
-                  <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowDatePicker(true)}>
-                    <Text style={styles.pickerBtnText}>📅 {noteDate || 'Tarih Seç'}</Text>
-                  </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={pickerDate}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(_, date) => {
-                        setShowDatePicker(false);
-                        if (date) {
-                          setPickerDate(date);
-                          setNoteDate(`${date.getDate().toString().padStart(2,'0')}.${(date.getMonth()+1).toString().padStart(2,'0')}.${date.getFullYear()}`);
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={pickerDate ? `${pickerDate.getFullYear()}-${(pickerDate.getMonth()+1).toString().padStart(2,'0')}-${pickerDate.getDate().toString().padStart(2,'0')}` : ''}
+                      onChange={(e: any) => {
+                        const d = new Date(e.target.value);
+                        if (!isNaN(d.getTime())) {
+                          setPickerDate(d);
+                          setNoteDate(`${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`);
                         }
                       }}
+                      style={{ width: '100%', padding: 12, fontSize: 15, borderRadius: 10, border: '1px solid #c8dff5', backgroundColor: '#f5faff', marginBottom: 8 }}
                     />
+                  ) : (
+                    <TextInput style={styles.input} placeholder="GG.AA.YYYY" value={noteDate} onChangeText={setNoteDate} />
                   )}
                 </View>
                 <View style={styles.dateTimeBox}>
                   <Text style={styles.label}>{t.alarmTime}</Text>
-                  <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowTimePicker(true)}>
-                    <Text style={styles.pickerBtnText}>🕐 {alarmTime || 'Saat Seç'}</Text>
-                  </TouchableOpacity>
-                  {showTimePicker && (
-                    <DateTimePicker
-                      value={pickerTime}
-                      mode="time"
-                      is24Hour
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(_, date) => {
-                        setShowTimePicker(false);
-                        if (date) {
-                          setPickerTime(date);
-                          setAlarmTime(`${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`);
-                        }
-                      }}
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="time"
+                      value={alarmTime}
+                      onChange={(e: any) => setAlarmTime(e.target.value)}
+                      style={{ width: '100%', padding: 12, fontSize: 15, borderRadius: 10, border: '1px solid #c8dff5', backgroundColor: '#f5faff', marginBottom: 8 }}
                     />
+                  ) : (
+                    <TextInput style={styles.input} placeholder="09:00" value={alarmTime} onChangeText={setAlarmTime} />
                   )}
                 </View>
               </View>
