@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, TextInput, Modal,
+  ScrollView, TextInput, Modal, Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Audio } from 'expo-av';
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
@@ -46,6 +47,10 @@ export default function NotesScreen({ navigation, route }: any) {
   const [content, setContent] = useState('');
   const [alarmTime, setAlarmTime] = useState('09:00');
   const [noteDate, setNoteDate] = useState('');
+  const [pickerDate, setPickerDate] = useState(new Date());
+  const [pickerTime, setPickerTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [repeat, setRepeat] = useState(t.once);
   const [transport, setTransport] = useState(TRANSPORT[0]);
   const [from, setFrom] = useState('');
@@ -109,9 +114,10 @@ export default function NotesScreen({ navigation, route }: any) {
     setRepeat(t.once); setTransport(TRANSPORT[0]);
     setFrom(''); setTo(''); setTicketNo(''); setShopItems(['']);
     setAudioUri(null); setIsRecording(false); setIsPlaying(false);
-    setNoteDate(
-      `${currentDate.getDate().toString().padStart(2,'0')}.${(currentDate.getMonth()+1).toString().padStart(2,'0')}.${currentDate.getFullYear()}`
-    );
+    const nd = currentDate;
+    setNoteDate(`${nd.getDate().toString().padStart(2,'0')}.${(nd.getMonth()+1).toString().padStart(2,'0')}.${nd.getFullYear()}`);
+    setPickerDate(nd);
+    setPickerTime(new Date());
     setStep('category');
   };
 
@@ -129,9 +135,11 @@ export default function NotesScreen({ navigation, route }: any) {
     setShopItems(note.items?.length ? note.items : ['']);
     setAudioUri(note.audioUri || null); setIsRecording(false); setIsPlaying(false);
     const d = new Date(note.date);
-    setNoteDate(
-      `${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`
-    );
+    setNoteDate(`${d.getDate().toString().padStart(2,'0')}.${(d.getMonth()+1).toString().padStart(2,'0')}.${d.getFullYear()}`);
+    setPickerDate(d);
+    const [h, m] = (note.alarmTime || '09:00').split(':');
+    const pt = new Date(); pt.setHours(Number(h)); pt.setMinutes(Number(m));
+    setPickerTime(pt);
     setStep('form');
   };
 
@@ -348,21 +356,44 @@ export default function NotesScreen({ navigation, route }: any) {
               <View style={styles.dateTimeRow}>
                 <View style={styles.dateTimeBox}>
                   <Text style={styles.label}>📅 Tarih</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="GG.AA.YYYY"
-                    value={noteDate}
-                    onChangeText={setNoteDate}
-                  />
+                  <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowDatePicker(true)}>
+                    <Text style={styles.pickerBtnText}>📅 {noteDate || 'Tarih Seç'}</Text>
+                  </TouchableOpacity>
+                  {showDatePicker && (
+                    <DateTimePicker
+                      value={pickerDate}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(_, date) => {
+                        setShowDatePicker(false);
+                        if (date) {
+                          setPickerDate(date);
+                          setNoteDate(`${date.getDate().toString().padStart(2,'0')}.${(date.getMonth()+1).toString().padStart(2,'0')}.${date.getFullYear()}`);
+                        }
+                      }}
+                    />
+                  )}
                 </View>
                 <View style={styles.dateTimeBox}>
                   <Text style={styles.label}>{t.alarmTime}</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="09:00"
-                    value={alarmTime}
-                    onChangeText={setAlarmTime}
-                  />
+                  <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowTimePicker(true)}>
+                    <Text style={styles.pickerBtnText}>🕐 {alarmTime || 'Saat Seç'}</Text>
+                  </TouchableOpacity>
+                  {showTimePicker && (
+                    <DateTimePicker
+                      value={pickerTime}
+                      mode="time"
+                      is24Hour
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={(_, date) => {
+                        setShowTimePicker(false);
+                        if (date) {
+                          setPickerTime(date);
+                          setAlarmTime(`${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`);
+                        }
+                      }}
+                    />
+                  )}
                 </View>
               </View>
 
@@ -552,6 +583,11 @@ const styles = StyleSheet.create({
   inputMulti: { height: 100, textAlignVertical: 'top' },
   dateTimeRow: { flexDirection: 'row', gap: 10 },
   dateTimeBox: { flex: 1 },
+  pickerBtn: {
+    borderWidth: 1, borderColor: '#c8dff5', borderRadius: 10,
+    padding: 12, backgroundColor: '#f5faff', marginBottom: 8,
+  },
+  pickerBtnText: { fontSize: 14, color: '#333', fontWeight: '500' },
   repeatRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   repeatBtn: {
     flex: 1, padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#ddd', alignItems: 'center',
