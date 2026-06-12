@@ -1,7 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
+
+async function cancelNoteNotification(notificationId: string | undefined) {
+  if (!notificationId || Platform.OS === 'web') return;
+  try { await Notifications.cancelScheduledNotificationAsync(notificationId); } catch {}
+}
+
+async function scheduleNoteNotification(note: any): Promise<string | undefined> {
+  if (Platform.OS === 'web' || !note.alarmTime) return undefined;
+  try {
+    const trigger = new Date(note.date);
+    const [h, m] = note.alarmTime.split(':').map(Number);
+    trigger.setHours(h, m, 0, 0);
+    if (trigger <= new Date()) return undefined;
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🔔 ' + note.title,
+        body: note.content || note.alarmTime,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: trigger,
+      },
+    });
+  } catch {
+    return undefined;
+  }
+}
 
 const MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 const DAYS = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
@@ -107,15 +136,27 @@ export default function HomeScreen({ navigation }: any) {
     return [...direct, ...yearly.filter((n: any) => !yearlyIds.has(n.id))];
   })();
 
-  const deleteNote = (id: string) => {
+  const deleteNote = async (id: string) => {
+    const note = selectedNotes.find((n: any) => n.id === id) as any;
+    await cancelNoteNotification(note?.notificationId);
     const updated = selectedNotes.filter(n => n.id !== id);
     setNotesByDate({ ...notesByDate, [selectedKey]: updated });
   };
 
-  const toggleDone = (id: string) => {
+  const toggleDone = async (id: string) => {
     const existing = notesByDate[selectedKey] || [];
-    const updated = existing.map((n: any) => n.id === id ? { ...n, done: !n.done } : n);
-    setNotesByDate({ ...notesByDate, [selectedKey]: updated });
+    const note = existing.find((n: any) => n.id === id) as any;
+    if (!note) return;
+    if (!note.done) {
+      await cancelNoteNotification(note.notificationId);
+      const updated = existing.map((n: any) => n.id === id ? { ...n, done: true, notificationId: undefined } : n);
+      setNotesByDate({ ...notesByDate, [selectedKey]: updated });
+    } else {
+      const undonedNote = { ...note, done: false };
+      const notificationId = await scheduleNoteNotification(undonedNote);
+      const updated = existing.map((n: any) => n.id === id ? { ...undonedNote, notificationId } : n);
+      setNotesByDate({ ...notesByDate, [selectedKey]: updated });
+    }
   };
 
   const openEdit = (note: any) => {
@@ -137,7 +178,7 @@ export default function HomeScreen({ navigation }: any) {
     setEditVisible(true);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!title.trim() && selectedCat !== 'alisveris') return;
     const saveKey = noteDate ? toDateKey(noteDate) : selectedKey;
     const cat = CATEGORIES.find(c => c.key === selectedCat);
@@ -147,7 +188,8 @@ export default function HomeScreen({ navigation }: any) {
     }
     const existing = allUpdated[saveKey] || [];
     const oldNote = Object.values(notesByDate).flat().find((n: any) => n.id === editingId) as any;
-    const updatedNote = {
+    await cancelNoteNotification(oldNote?.notificationId);
+    const updatedNote: any = {
       ...oldNote,
       category: selectedCat,
       title: title || (cat?.label || ''),
@@ -157,7 +199,9 @@ export default function HomeScreen({ navigation }: any) {
       to: selectedCat === 'seyahat' ? to : undefined,
       ticketNo: selectedCat === 'seyahat' ? ticketNo : undefined,
       items: selectedCat === 'alisveris' ? shopItems.filter(s => s.trim()) : undefined,
+      notificationId: undefined,
     };
+    updatedNote.notificationId = await scheduleNoteNotification(updatedNote);
     allUpdated[saveKey] = [...existing, updatedNote].sort((a: any, b: any) => a.time.localeCompare(b.time));
     setNotesByDate(allUpdated);
     setEditVisible(false);

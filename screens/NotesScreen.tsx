@@ -4,8 +4,37 @@ import {
   ScrollView, TextInput, Modal, Platform,
 } from 'react-native';
 import { Audio } from 'expo-av';
+import * as Notifications from 'expo-notifications';
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
+
+async function scheduleNoteNotification(note: any): Promise<string | undefined> {
+  if (Platform.OS === 'web' || !note.alarmTime) return undefined;
+  try {
+    const trigger = new Date(note.date);
+    const [h, m] = note.alarmTime.split(':').map(Number);
+    trigger.setHours(h, m, 0, 0);
+    if (trigger <= new Date()) return undefined;
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🔔 ' + note.title,
+        body: note.content || note.alarmTime,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: trigger,
+      },
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+async function cancelNoteNotification(notificationId: string | undefined) {
+  if (!notificationId || Platform.OS === 'web') return;
+  try { await Notifications.cancelScheduledNotificationAsync(notificationId); } catch {}
+}
 
 const DAYS_TR = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
 const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
@@ -150,21 +179,20 @@ export default function NotesScreen({ navigation, route }: any) {
   };
   const removeShopItem = (i: number) => setShopItems(shopItems.filter((_,idx) => idx !== i));
 
-  const saveNote = () => {
+  const saveNote = async () => {
     if (!title.trim() && selectedCat !== 'alisveris') return;
     const saveKey = noteDate ? toDateKey(noteDate) : dateKey;
     const cat = CATEGORIES.find(c => c.key === selectedCat);
 
     if (editingId) {
-      // Düzenleme: eski notu bul, güncelle (farklı tarihe taşınmış olabilir)
       const allUpdated = { ...notesByDate };
-      // eski kaydı bütün tarihlerden temizle
       for (const key of Object.keys(allUpdated)) {
         allUpdated[key] = allUpdated[key].filter((n: any) => n.id !== editingId);
       }
       const existing = allUpdated[saveKey] || [];
       const oldNote = Object.values(notesByDate).flat().find((n: any) => n.id === editingId) as any;
-      const updatedNote = {
+      await cancelNoteNotification(oldNote?.notificationId);
+      const updatedNote: any = {
         ...oldNote,
         category: selectedCat,
         title: title || (cat?.label || ''),
@@ -175,13 +203,15 @@ export default function NotesScreen({ navigation, route }: any) {
         to: selectedCat === 'seyahat' ? to : undefined,
         ticketNo: selectedCat === 'seyahat' ? ticketNo : undefined,
         items: selectedCat === 'alisveris' ? shopItems.filter(s => s.trim()) : undefined,
+        notificationId: undefined,
       };
+      updatedNote.notificationId = await scheduleNoteNotification(updatedNote);
       allUpdated[saveKey] = [...existing, updatedNote].sort((a: any, b: any) => a.time.localeCompare(b.time));
       setNotesByDate(allUpdated);
     } else {
       const now = new Date();
       const existing = notesByDate[saveKey] || [];
-      const newNote = {
+      const newNote: any = {
         id: Date.now().toString(),
         category: selectedCat,
         title: title || (cat?.label || ''),
@@ -194,6 +224,7 @@ export default function NotesScreen({ navigation, route }: any) {
         items: selectedCat === 'alisveris' ? shopItems.filter(s => s.trim()) : undefined,
         audioUri: audioUri || undefined,
       };
+      newNote.notificationId = await scheduleNoteNotification(newNote);
       const sorted = [...existing, newNote].sort((a,b) => a.time.localeCompare(b.time));
       setNotesByDate({ ...notesByDate, [saveKey]: sorted });
     }
@@ -202,12 +233,24 @@ export default function NotesScreen({ navigation, route }: any) {
     if (route?.params?.editNote) navigation.goBack();
   };
 
-  const toggleDone = (id: string) => {
-    const updated = todayNotes.map(n => n.id === id ? { ...n, done: !n.done } : n);
-    setNotesByDate({ ...notesByDate, [dateKey]: updated });
+  const toggleDone = async (id: string) => {
+    const note = todayNotes.find(n => n.id === id) as any;
+    if (!note) return;
+    if (!note.done) {
+      await cancelNoteNotification(note.notificationId);
+      const updated = todayNotes.map(n => n.id === id ? { ...n, done: true, notificationId: undefined } : n);
+      setNotesByDate({ ...notesByDate, [dateKey]: updated });
+    } else {
+      const undonedNote = { ...note, done: false };
+      const notificationId = await scheduleNoteNotification(undonedNote);
+      const updated = todayNotes.map(n => n.id === id ? { ...undonedNote, notificationId } : n);
+      setNotesByDate({ ...notesByDate, [dateKey]: updated });
+    }
   };
 
-  const deleteNote = (id: string) => {
+  const deleteNote = async (id: string) => {
+    const note = todayNotes.find(n => n.id === id) as any;
+    await cancelNoteNotification(note?.notificationId);
     setNotesByDate({ ...notesByDate, [dateKey]: todayNotes.filter(n => n.id !== id) });
   };
 

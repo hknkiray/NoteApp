@@ -1,11 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Vibration } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Vibration, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 import { NotesProvider, useNotes } from './context/NotesContext';
 import LanguageScreen from './screens/LanguageScreen';
 import HomeScreen from './screens/HomeScreen';
 import NotesScreen from './screens/NotesScreen';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 const Stack = createNativeStackNavigator();
 
@@ -60,6 +71,12 @@ function AlarmChecker() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      Notifications.requestPermissionsAsync();
+    }
+  }, []);
+
   return (
     <NotesProvider>
       <NavigationContainer>
@@ -68,7 +85,8 @@ export default function App() {
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="Notes" component={NotesScreen} />
         </Stack.Navigator>
-        <AlarmChecker />
+        {/* Web'de yerleşik alarm modal, native'de sistem bildirimi kullanılıyor */}
+        {Platform.OS === 'web' && <AlarmChecker />}
       </NavigationContainer>
     </NotesProvider>
   );

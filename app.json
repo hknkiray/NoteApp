@@ -21,7 +21,10 @@
       "permissions": [
         "RECORD_AUDIO",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "POST_NOTIFICATIONS",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM"
       ]
     },
     "web": {
@@ -33,6 +36,13 @@
         "expo-av",
         {
           "microphonePermission": "Ses kaydı için mikrofon izni gerekiyor."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#1A73E8"
         }
       ]
     ],

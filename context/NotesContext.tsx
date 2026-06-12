@@ -17,6 +17,7 @@ export type Note = {
   ticketNo?: string;
   items?: string[];
   audioUri?: string;
+  notificationId?: string;
 };
 
 type NotesByDate = { [date: string]: Note[] };
