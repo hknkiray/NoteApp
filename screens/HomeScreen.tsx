@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Platform } from 'react-native';
+import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
+
+const BANNER_AD_UNIT_ID = __DEV__
+  ? TestIds.BANNER
+  : 'ca-app-pub-2933734445794077/8128598578';
 import * as Notifications from 'expo-notifications';
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
@@ -313,6 +318,14 @@ export default function HomeScreen({ navigation }: any) {
       <TouchableOpacity style={styles.langBtn} onPress={() => navigation.navigate('Language')}>
         <Text style={styles.langBtnText}>🌍 Dil Değiştir</Text>
       </TouchableOpacity>
+
+      {/* Banner Reklam */}
+      {Platform.OS !== 'web' && (
+        <BannerAd
+          unitId={BANNER_AD_UNIT_ID}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        />
+      )}
 
       {/* DÜZENLEME MODAL */}
       <Modal visible={editVisible} animationType="slide" transparent>
