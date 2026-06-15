@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal, TextInput, Platform } from 'react-native';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-
-const BANNER_AD_UNIT_ID = __DEV__
-  ? TestIds.BANNER
-  : 'ca-app-pub-2933734445794077/8128598578';
 import * as Notifications from 'expo-notifications';
+
+const BANNER_AD_UNIT_ID = 'ca-app-pub-2933734445794077/8128598578';
+let BannerAd: any = null;
+let BannerAdSize: any = null;
+if (Platform.OS !== 'web') {
+  const ads = require('react-native-google-mobile-ads');
+  BannerAd = ads.BannerAd;
+  BannerAdSize = ads.BannerAdSize;
+}
 import { useNotes } from '../context/NotesContext';
 import translations from '../locales';
 
@@ -320,7 +324,7 @@ export default function HomeScreen({ navigation }: any) {
       </TouchableOpacity>
 
       {/* Banner Reklam */}
-      {Platform.OS !== 'web' && (
+      {Platform.OS !== 'web' && BannerAd && BannerAdSize && (
         <BannerAd
           unitId={BANNER_AD_UNIT_ID}
           size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
